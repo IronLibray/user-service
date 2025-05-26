@@ -1,5 +1,8 @@
 package com.ironlibrary.user_service.controller;
 
+import com.ironlibrary.user_service.model.MembershipType;
+import com.ironlibrary.user_service.model.User;
+import com.ironlibrary.user_service.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
