@@ -6,10 +6,8 @@ import com.ironlibrary.user_service.model.User;
 import com.ironlibrary.user_service.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureWebMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -22,29 +20,18 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * Tests de integración para UserController usando MockMvc
- * Compatible con Spring Boot 3.4+ (sin @MockBean deprecated)
+ * Enfoque limpio con @TestConfiguration para Spring Boot 3.4+
  */
-@SpringBootTest
-@AutoConfigureWebMvc
+@WebMvcTest(UserController.class)
 @ActiveProfiles("test")
 class UserControllerMockMvcTest {
-
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private UserService userService; // Este será el mock
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    private User testUser;
 
     @TestConfiguration
     static class TestConfig {
@@ -55,9 +42,20 @@ class UserControllerMockMvcTest {
         }
     }
 
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private User testUser;
+
     @BeforeEach
     void setUp() {
-        // Reset mock before each test
+        // Resetear el mock antes de cada test
         reset(userService);
 
         testUser = new User();
@@ -87,6 +85,8 @@ class UserControllerMockMvcTest {
                 .andExpect(jsonPath("$[0].email").value("juan.perez@email.com"))
                 .andExpect(jsonPath("$[0].membershipType").value("PREMIUM"))
                 .andExpect(jsonPath("$[0].isActive").value(true));
+
+        verify(userService).findAllUsers();
     }
 
     @Test
@@ -102,6 +102,8 @@ class UserControllerMockMvcTest {
                 .andExpect(jsonPath("$.name").value("Juan Pérez"))
                 .andExpect(jsonPath("$.email").value("juan.perez@email.com"))
                 .andExpect(jsonPath("$.membershipType").value("PREMIUM"));
+
+        verify(userService).findUserById(1L);
     }
 
     @Test
@@ -114,6 +116,8 @@ class UserControllerMockMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.email").value("juan.perez@email.com"));
+
+        verify(userService).findUserByEmail("juan.perez@email.com");
     }
 
     @Test
@@ -127,6 +131,71 @@ class UserControllerMockMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$[0].isActive").value(true));
+
+        verify(userService).findActiveUsers();
+    }
+
+    @Test
+    void getInactiveUsers_ShouldReturnInactiveUsers() throws Exception {
+        // Given
+        testUser.setIsActive(false);
+        List<User> inactiveUsers = Arrays.asList(testUser);
+        when(userService.findInactiveUsers()).thenReturn(inactiveUsers);
+
+        // When & Then
+        mockMvc.perform(get("/api/users/inactive"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$[0].isActive").value(false));
+
+        verify(userService).findInactiveUsers();
+    }
+
+    @Test
+    void getUsersWhoCanBorrow_ShouldReturnEligibleUsers() throws Exception {
+        // Given
+        List<User> users = Arrays.asList(testUser);
+        when(userService.findUsersWhoCanBorrow()).thenReturn(users);
+
+        // When & Then
+        mockMvc.perform(get("/api/users/can-borrow"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$[0].isActive").value(true));
+
+        verify(userService).findUsersWhoCanBorrow();
+    }
+
+    @Test
+    void getUsersByMembership_ShouldReturnUsersOfMembership() throws Exception {
+        // Given
+        List<User> users = Arrays.asList(testUser);
+        when(userService.findByMembershipType(MembershipType.PREMIUM)).thenReturn(users);
+
+        // When & Then
+        mockMvc.perform(get("/api/users/membership")
+                        .param("type", "PREMIUM"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$[0].membershipType").value("PREMIUM"));
+
+        verify(userService).findByMembershipType(MembershipType.PREMIUM);
+    }
+
+    @Test
+    void getUsersByName_ShouldReturnUsersByName() throws Exception {
+        // Given
+        List<User> users = Arrays.asList(testUser);
+        when(userService.findByName("Juan")).thenReturn(users);
+
+        // When & Then
+        mockMvc.perform(get("/api/users/search/name")
+                        .param("name", "Juan"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$[0].name").value("Juan Pérez"));
+
+        verify(userService).findByName("Juan");
     }
 
     @Test
@@ -139,6 +208,8 @@ class UserControllerMockMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(content().string("true"));
+
+        verify(userService).validateUser(1L);
     }
 
     @Test
@@ -156,6 +227,8 @@ class UserControllerMockMvcTest {
                 .andExpect(jsonPath("$.basicUsers").value(30))
                 .andExpect(jsonPath("$.premiumUsers").value(40))
                 .andExpect(jsonPath("$.studentUsers").value(30));
+
+        verify(userService).getUserStats();
     }
 
     @Test
@@ -178,6 +251,8 @@ class UserControllerMockMvcTest {
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.name").value("Juan Pérez"));
+
+        verify(userService).saveUser(any(User.class));
     }
 
     @Test
@@ -207,6 +282,51 @@ class UserControllerMockMvcTest {
                 .andExpect(jsonPath("$.name").value("Juan Carlos Pérez"))
                 .andExpect(jsonPath("$.membershipType").value("STUDENT"))
                 .andExpect(jsonPath("$.isActive").value(false));
+
+        verify(userService).updateUser(eq(1L), any(User.class));
+    }
+
+    @Test
+    void toggleUserStatus_ShouldReturnToggledUser() throws Exception {
+        // Given
+        User toggledUser = new User();
+        toggledUser.setId(1L);
+        toggledUser.setName("Juan Pérez");
+        toggledUser.setEmail("juan.perez@email.com");
+        toggledUser.setMembershipType(MembershipType.PREMIUM);
+        toggledUser.setIsActive(false); // Cambiado a false
+
+        when(userService.toggleUserStatus(1L)).thenReturn(toggledUser);
+
+        // When & Then
+        mockMvc.perform(patch("/api/users/1/toggle-status"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.isActive").value(false));
+
+        verify(userService).toggleUserStatus(1L);
+    }
+
+    @Test
+    void updateMembershipType_ShouldReturnUpdatedUser() throws Exception {
+        // Given
+        User updatedUser = new User();
+        updatedUser.setId(1L);
+        updatedUser.setName("Juan Pérez");
+        updatedUser.setEmail("juan.perez@email.com");
+        updatedUser.setMembershipType(MembershipType.BASIC);
+        updatedUser.setIsActive(true);
+
+        when(userService.updateMembershipType(1L, MembershipType.BASIC)).thenReturn(updatedUser);
+
+        // When & Then
+        mockMvc.perform(patch("/api/users/1/membership")
+                        .param("type", "BASIC"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.membershipType").value("BASIC"));
+
+        verify(userService).updateMembershipType(1L, MembershipType.BASIC);
     }
 
     @Test
@@ -217,6 +337,8 @@ class UserControllerMockMvcTest {
         // When & Then
         mockMvc.perform(delete("/api/users/1"))
                 .andExpect(status().isNoContent());
+
+        verify(userService).deleteUser(1L);
     }
 
     @Test
