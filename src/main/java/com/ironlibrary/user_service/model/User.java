@@ -1,6 +1,5 @@
 package com.ironlibrary.user_service.model;
 
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,6 +9,7 @@ import java.time.LocalDate;
 
 /**
  * Modelo User - Representa un usuario en el sistema
+ * Modificado para compatibilidad con H2 en tests
  */
 @Entity
 @Table(name = "users")
@@ -29,7 +29,7 @@ public class User {
     private String email;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "membership_type", nullable = false)
+    @Column(name = "membership_type", nullable = false, length = 50)
     private MembershipType membershipType;
 
     @Column(name = "is_active", nullable = false)
