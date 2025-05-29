@@ -1,6 +1,5 @@
 package com.ironlibrary.user_service.controller;
 
-
 import com.ironlibrary.user_service.model.MembershipType;
 import com.ironlibrary.user_service.model.User;
 import com.ironlibrary.user_service.service.UserService;

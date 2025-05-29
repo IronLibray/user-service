@@ -1,6 +1,5 @@
 package com.ironlibrary.user_service.service;
 
-
 import com.ironlibrary.user_service.exception.EmailAlreadyExistsException;
 import com.ironlibrary.user_service.exception.UserNotFoundException;
 import com.ironlibrary.user_service.model.MembershipType;
