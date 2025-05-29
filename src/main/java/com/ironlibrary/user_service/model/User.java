@@ -9,7 +9,6 @@ import java.time.LocalDate;
 
 /**
  * Modelo User - Representa un usuario en el sistema
- * Modificado para compatibilidad con H2 en tests
  */
 @Entity
 @Table(name = "users")
